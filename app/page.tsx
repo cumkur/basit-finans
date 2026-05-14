@@ -628,11 +628,63 @@ if (!user) {
     setRateStatus("Manuel kur güncellendi");
   }
 
-  function analyzeImportText() {
-    const parsedRows = parseImportText(importText, rates);
-    setImportRows(parsedRows);
-    setImportStatus(`${parsedRows.length} hareket bulundu. Kategorileri kontrol edip içe aktarabilirsin.`);
+  async function analyzeImportText() {
+    setImportStatus("Metin AI ile analiz ediliyor...");
+
+    try {
+      const response = await fetch("/api/parse-transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: importText }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Metin analiz edilemedi");
+      }
+
+      const parsed = JSON.parse(data.result);
+      const rows = Array.isArray(parsed)
+        ? parsed
+        : parsed.transactions || parsed.items || [];
+
+      const mappedRows = rows.map((row, index) => {
+        const detectedText = `${row.description || ""} ${row.note || ""} ${row.raw || ""}`;
+        const currency = currencies.includes(row.currency)
+          ? row.currency
+          : detectCurrency(detectedText);
+
+        const amount = Math.abs(Number(row.amount || 0));
+        const type = row.type === "income" ? "income" : "expense";
+
+        return {
+          importId: `${Date.now()}-${index}`,
+          selected: true,
+          date: row.date || today,
+          type,
+          category: row.category || guessCategory(detectedText, type),
+          account: row.account || guessAccount(detectedText, currency),
+          amount,
+          currency,
+          amountEur: convertToEur(amount, currency, rates),
+          rateToEur: rates[currency],
+          note: row.description || row.note || "AI ile içe aktarılan kayıt",
+          raw: row.raw || detectedText || "AI sonucu",
+        };
+      }).filter((row) => row.amount > 0);
+
+      setImportRows(mappedRows);
+      setImportStatus(`${mappedRows.length} hareket AI ile bulundu. Kontrol edip içe aktarabilirsin.`);
+    } catch (error) {
+      console.error(error);
+      setImportStatus("AI metin analizi başarısız oldu. Terminal/Vercel logs kontrol edilmeli.");
+    }
   }
+
+  
 
   function toggleImportRow(importId) {
     setImportRows((currentRows) => currentRows.map((row) => row.importId === importId ? { ...row, selected: !row.selected } : row));
