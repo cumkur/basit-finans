@@ -702,13 +702,37 @@ if (!user) {
     }));
   }
 
-  function importSelectedRows() {
+  async function importSelectedRows() {
     const selectedRows = importRows.filter((row) => row.selected);
-    if (selectedRows.length === 0) return;
-    const newTransactions = selectedRows.map((row, index) => ({ id: Date.now() + index, date: row.date, type: row.type, category: row.category, account: row.account, amount: Number(row.amount), currency: row.currency, amountEur: convertToEur(row.amount, row.currency, rates), rateToEur: rates[row.currency], note: row.note }));
-    setTransactions((currentTransactions) => [...newTransactions, ...currentTransactions]);
+    if (selectedRows.length === 0 || !user) return;
+
+    const rowsToInsert = selectedRows.map((row) => ({
+      user_id: user.id,
+      date: row.date,
+      type: row.type,
+      category: row.category,
+      account: row.account,
+      amount: Number(row.amount),
+      currency: row.currency,
+      amount_eur: convertToEur(row.amount, row.currency, rates),
+      rate_to_eur: rates[row.currency],
+      note: row.note,
+    }));
+
+    const { error } = await supabase
+      .from("transactions")
+      .insert(rowsToInsert);
+
+    if (error) {
+      console.error("Supabase import insert error:", error);
+      setImportStatus("İçe aktarma Supabase’e kaydedilemedi.");
+      return;
+    }
+
+    await loadTransactions(user.id);
+
     setImportRows([]);
-    setImportStatus(`${selectedRows.length} hareket muhasebeye aktarıldı.`);
+    setImportStatus(`${selectedRows.length} hareket kalıcı olarak içe aktarıldı.`);
   }
 
   async function handleImportFile(file) {
