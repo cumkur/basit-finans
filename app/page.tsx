@@ -866,9 +866,9 @@ if (!user) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 md:flex-row md:p-6">
-        <aside className="rounded-3xl bg-slate-950 p-4 text-white md:min-h-[calc(100vh-48px)] md:w-72">
+    <div className="min-h-screen bg-slate-50 text-slate-900 px-3 py-3 md:px-6 md:py-6">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 p-3 lg:flex-row lg:gap-6 lg:p-6">
+        <aside className="w-full rounded-3xl bg-slate-950 p-4 text-white lg:min-h-[calc(100vh-48px)] lg:w-72">
           <div className="mb-8 flex items-center gap-3">
             <div className="rounded-2xl bg-white/10 p-3"><Icon name="wallet" className="h-6 w-6" /></div>
             <div>
