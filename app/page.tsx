@@ -106,6 +106,23 @@ function guessAccount(description, currency) {
   return "KBC";
 }
 
+function applyPersonalRules(row, rules) {
+  const text = normalizeText(`${row.description || ""} ${row.note || ""} ${row.raw || ""}`);
+
+  const matchedRule = rules.find((rule) =>
+    text.includes(normalizeText(rule.keyword))
+  );
+
+  if (!matchedRule) return row;
+
+  return {
+    ...row,
+    category: matchedRule.category || row.category,
+    account: matchedRule.account || row.account,
+    currency: matchedRule.currency || row.currency,
+  };
+}
+
 function detectCurrency(text) {
   const value = String(text || "").toUpperCase();
   if (value.includes("TRY") || value.includes(" TL") || value.includes("₺")) return "TRY";
@@ -670,27 +687,28 @@ if (!user) {
         : parsed.transactions || parsed.items || [];
 
       const mappedRows = rows.map((row, index) => {
-        const detectedText = `${row.description || ""} ${row.note || ""} ${row.raw || ""}`;
-        const currency = currencies.includes(row.currency)
-          ? row.currency
+        const ruledRow = applyPersonalRules(row, personalRules);
+        const detectedText = `${ruledRow.description || ""} ${ruledRow.note || ""} ${ruledRow.raw || ""}`;
+        const currency = currencies.includes(ruledRow.currency)
+          ? ruledRow.currency
           : detectCurrency(detectedText);
 
-        const amount = Math.abs(Number(row.amount || 0));
-        const type = row.type === "income" ? "income" : "expense";
+        const amount = Math.abs(Number(ruledRow.amount || 0));
+        const type = ruledRow.type === "income" ? "income" : "expense";
 
         return {
           importId: `${Date.now()}-${index}`,
           selected: true,
-          date: row.date || today,
+          date: ruledRow.date || today,
           type,
-          category: row.category || guessCategory(detectedText, type),
-          account: row.account || guessAccount(detectedText, currency),
+          category: ruledRow.category || guessCategory(detectedText, type),
+          account: ruledRow.account || guessAccount(detectedText, currency),
           amount,
           currency,
           amountEur: convertToEur(amount, currency, rates),
           rateToEur: rates[currency],
-          note: row.description || row.note || "AI ile içe aktarılan kayıt",
-          raw: row.raw || detectedText || "AI sonucu",
+          note: ruledRow.description || ruledRow.note || "AI ile içe aktarılan kayıt",
+          raw: ruledRow.raw || detectedText || "AI sonucu",
         };
       }).filter((row) => row.amount > 0);
 
