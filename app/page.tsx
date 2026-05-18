@@ -469,6 +469,33 @@ if (!user) {
     setPersonalRules(data || []);
   }
 
+  async function saveCategoryRuleFromImport(row) {
+  if (!user) return;
+
+  const sourceText = row.raw || row.note || "";
+  const keyword = sourceText
+    .split(" ")
+    .filter((word) => word.length > 3)
+    .slice(0, 3)
+    .join(" ")
+    .toUpperCase();
+
+  if (!keyword || !row.category) return;
+
+  const { error } = await supabase.from("category_rules").insert({
+    user_id: user.id,
+    keyword,
+    category: row.category,
+    account: row.account,
+    currency: row.currency,
+  });
+
+  if (error) {
+    console.error("Category rule save error:", error);
+  }
+}
+
+
 
   async function updateRates() {
     setRateStatus("Kurlar güncelleniyor...");
@@ -764,6 +791,12 @@ if (!user) {
       setImportStatus("İçe aktarma Supabase’e kaydedilemedi.");
       return;
     }
+
+    for (const row of selectedRows) {
+      await saveCategoryRuleFromImport(row);
+    }
+
+    await loadCategoryRules(user.id);
 
     await loadTransactions(user.id);
 
