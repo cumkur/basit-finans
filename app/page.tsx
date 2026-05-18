@@ -246,6 +246,8 @@ export default function BasitFinansPaneli() {
   const [user, setUser] = useState(null);
   const [email, setEmail] = useState("");
   const [authStatus, setAuthStatus] = useState("");
+
+  const [personalRules, setPersonalRules] = useState([]);
   
 React.useEffect(() => {
   checkUser();
@@ -258,6 +260,7 @@ React.useEffect(() => {
       loadTransactions(currentUser.id);
       loadDebts(currentUser.id);
       loadAssets(currentUser.id);
+      loadCategoryRules(currentUser.id);
     } else {
       setTransactions([]);
       setDebts([]);
@@ -324,6 +327,7 @@ if (!user) {
     loadTransactions(data.user.id);
     loadDebts(data.user.id);
     loadAssets(data.user.id);
+    loadCategoryRules(data.user.id);
   }
   }
 
@@ -432,6 +436,20 @@ if (!user) {
     }));
 
     setAssets(formatted);
+  }
+
+    async function loadCategoryRules(userId) {
+    const { data, error } = await supabase
+      .from("category_rules")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error("Category rules load error:", error);
+      return;
+    }
+
+    setPersonalRules(data || []);
   }
 
 
